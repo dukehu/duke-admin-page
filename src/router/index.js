@@ -6,6 +6,8 @@ import Resource from  '@/page/resource-manager/index.vue';
 import OperationCode from  '@/page/operation-code-manager/index.vue';
 import Logging from  '@/page/logging-manager/index.vue';
 import Desc from  '@/page/desc/index.vue';
+import Generator from  '@/page/code-generator/index.vue';
+import Login from  '@/page/login/index.vue';
 Vue.use(Router)
 
 export default new Router({
@@ -39,6 +41,18 @@ export default new Router({
       path: '/logging',
       name: 'logging',
       component: Logging
+    },
+    {
+      path: '/generator',
+      name: 'generator',
+      component: Generator
+    },
+    {
+      path: '/login',
+      name: 'Login',
+      components: {
+        blank: Login
+      }
     }
   ]
 })

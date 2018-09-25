@@ -6,8 +6,8 @@
         <div class="panel-body">
             <Row type="flex" justify="space-between" class="control">
                 <div class="search-bar" style="width:315px">
-                    <Select v-model="serviceId">
-                        <Option v-for="m in modules" value="m.id" :key="m.id">{{m.name}}</Option>
+                    <Select v-model="serviceId" @on-change="changeModule" >
+                        <Option v-for="(module, index) in modules" :value="module.id" :key="index">{{module.name}}</Option>
                     </Select>
                 </div>
                 <div>
@@ -199,10 +199,7 @@ export default {
             serviceId: 'duke-admin',
             serviceListLoading: false,
             authTree: [],
-            modules: [
-                {id: 'duke-admin', name: '后端管理'},
-                {id: 'duke-blog', name: '博客项目'},
-            ],
+            modules: [],
             dataColumns: [
                 {id: '20156540', title: 'name', key: 'name'},
                 {id: '20156541', title: 'url', key: 'url'},
@@ -300,6 +297,11 @@ export default {
         }
     },
     methods: {
+        // 切换模块
+        changeModule() {
+            console.log(this.serviceId);
+            this.getResourceTree();
+        },
         // 授权
         authorize(params) {
             var row = params.row;
@@ -357,9 +359,6 @@ export default {
                 this.operationCodes = data.data;
             })
         },
-        moduleList() {
-
-        },
         // 保存资源
         saveResource() {
             this.$refs.resource.validate((valid) => {
@@ -367,6 +366,7 @@ export default {
                     this.$axios('post',"/api/admin/resource",this.resource).then(res => {
                         this.saveRerourceModalShow = false;
                         this.$Message.success('Add Successful!');
+                        this.getResourceTree();
                     });
                 } else {
                     this.saveRerourceModalShow = true;
@@ -378,8 +378,7 @@ export default {
         saveModule() {
             this.$refs.module.validate((valid) => {
                 if (valid) {
-                    console.log(this.resource);
-                    this.$axios('post',"/api/admin/resource/module",{
+                    this.$axios('post',"/api/admin/module",{
                         name: this.module.name,
                         code: this.module.code,
                         router: this.module.router,
@@ -417,6 +416,7 @@ export default {
                 this.resourceDetail = data.data;
             })
         },
+        // 
         seleclParent() {
             this.resource.parentName = this.parentNode;
         },
@@ -432,8 +432,7 @@ export default {
                 parentId: this.serviceId
             }).then(data => {
                 this.resourceTree = data.data;
-                if(this.resourceTree) {
-                    this.resourceTree[0].expand = true;
+                if(this.resourceTree.length) {
                     this.resourceId = this.resourceTree[0].key;
                     this.getResourceDetail(this.resourceTree[0].key);
                 }
@@ -445,9 +444,6 @@ export default {
                 resourceId: this.resourceId
             }).then(data => {
                 this.authTree = data.data;
-                if(this.authTree) {
-                    this.authTree[0].expand = true;
-                }
             })
         }
     },

@@ -5,6 +5,9 @@
       <body-left></body-left>
       <body-right></body-right>
     </div>
+    <!-- <div class="login">
+      <router-view name="blank"></router-view>
+    </div> -->
   </div>
 </template>
 

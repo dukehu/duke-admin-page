@@ -6,19 +6,20 @@
         <div class="panel-body">
             <Row type="flex" justify="space-between" class="control">
                 <div class="search-bar">
-                    <Select v-model="serviceId" style="width:200px">
+                    <Select v-model="serviceId" @on-change="changeService" style="width:200px">
                         <Option v-for="service in services" :value="service.id" :key="service.id">
                             {{ service.name }}
                         </Option>
                     </Select>
-                    <Select v-model="controller" style="width:200px">
-                        <Option v-for="controller in controllers" :value="controller.id" :key="controller.id">
-                            {{ controller.name }}
+                    <Select v-model="controller" @on-change="changeController" style="width:200px">
+                        <Option v-for="c in controllers" :value="c" :key="c">
+                            {{ c }}
                         </Option>
                     </Select>
                 </div>
                 <div>
                     <Button type="success" @click="modalAdd = true" ><i class="fa fa-plus"></i> Add</Button>
+                    <Button type="error"  :disabled="deleteDisabled" @click="modalDelete = true"><i class="fa fa-trash"></i> Delete</Button>
                 </div>
             </Row>
 
@@ -26,8 +27,8 @@
                 border
                 :stripe="true"
                 :columns="dataColumns" 
-                :data="pageInfo.list" 
-                @on-selection-change="selectChange">
+                :data="pageInfo.list"
+                @on-selection-change="selectChanged">
             </Table>
             <Row type="flex" justify="space-between" class="footer">
                 <div class="info-bar">
@@ -37,7 +38,7 @@
                         v-model="pageSize" 
                         :max="pageInfo.total" 
                         :min="1" 
-                        @on-change="updateDataShow">
+                        @on-change="updatePageSize">
                         {{ pageSize }}
                     </Input-number>
                     / Page
@@ -45,9 +46,9 @@
                 <div class="page">
                     <span class="total">Total {{ pageInfo.total }}</span>
                     <Page 
-                        :total="totalSize" 
+                        :total="pageInfo.total" 
                         :current="currentPage" 
-                        :page-size="pageInfo.size" 
+                        :page-size="pageSize" 
                         @on-change="pageChange">
                     </Page>
                 </div>
@@ -61,7 +62,7 @@
             title="Add"
             ok-text="OK"
             cancel-text="Cancel"
-            @on-ok="addOk"
+            @on-ok="saveOperationCode"
             width="500px">
                 <Form :rules="operationCodeFormValidate" ref="operationCode" :model="operationCode" :label-width="115">
                     <Form-item label="Service Id" prop="serviceId">
@@ -102,15 +103,15 @@
 export default {
     data() {
         return {
-            pageSize:10,
-            currentPage:1,
+            pageSize: 9,
+            currentPage: 1,
             pageInfo: {},
             services: [
-                {id: '123', name: 'duke-blog'},
-                {id: '124', name: 'duke-admin'},
+                {id: 'duke-admin', name: '后台管理'},
+                {id: 'duke-blog', name: '博客项目'},
             ],
             controllers: [],
-            serviceId: '',
+            serviceId: 'duke-admin',
             controller: '',
             operationCode: {
                 serviceId: '',
@@ -123,10 +124,8 @@ export default {
             },
             modalAdd: false,
             loading: true,
-            showNum: 1,
-            totalSize: 1,
-            currentPage: 1,
             dataColumns: [
+                {type: 'selection', width: 60, align: 'center'},
                 {id: '20180801', title: 'Service Id',  key: 'serviceId'},
                 {id: '20180802', title: 'Name',  key: 'name'},
                 {id: '20180803', title: 'Operation Code',  key: 'code'},
@@ -185,20 +184,34 @@ export default {
                 controller: [
                     {required: true, message: 'Controller cannot be empty', trigger: 'blur'}
                 ]
-            }
+            },
+            selectedOperationCodes: {},
+            deleteDisabled: true,
+            modalDelete: false
         }
     },
     methods: {
-        selectChange() {
-
+        // 改变每页条数
+        updatePageSize() {
+            this.getOperationCodes();
         },
-        updateDataShow() {
-
+        // 点击上一页、下一页、页码时调用
+        pageChange(page) {
+            this.currentPage = page;
+            this.getOperationCodes();
         },
-        pageChange() {
-
+        // 改变服务搜索下拉框
+        changeService() {
+            this.controller = '';
+            this.getControllers();
+            this.getOperationCodes();
         },
-        addOk() {
+        // 改变controller搜索下拉框
+        changeController() {
+            this.getOperationCodes();
+        },
+        // 保存操作码
+        saveOperationCode() {
             this.$refs.operationCode.validate((valid) => {
                 if (valid) {
                     this.$axios('post',"/api/admin/operation_code",this.operationCode).then(res => {
@@ -211,13 +224,13 @@ export default {
                 }
             })
         },
+        // controller列表
         getControllers() {
-            this.$axios('get','/api/admin/operation_code/controller', {
-                serviceId: this.serviceId
-            }).then(data => {
+            this.$axios('get','/api/admin/operation_code/controller/' + this.serviceId).then(data => {
                 this.controllers = data.data;
             })
         },
+        // 操作码列表
         getOperationCodes() {
             this.$axios('get','/api/admin/operation_code', {
                 serviceId: this.serviceId,
@@ -228,6 +241,18 @@ export default {
                 this.pageInfo = data.data;
             })
         },
+        // 选择的数据发生变化
+        selectChanged(data) {
+            this.selectedOperationCodes = data;
+            let operationCodeIds = "";
+            if(this.selectedOperationCodes.length) {
+                this.selectedOperationCodes.forEach(operationCode => {
+                    operationCodeIds += operationCode.id + ',';
+                });
+                operationCodeIds = operationCodeIds.substring(0, operationCodeIds.length - 1);
+                console.log(operationCodeIds);
+            }
+        },
         getServices() {
 
         }
@@ -236,7 +261,16 @@ export default {
        this.getControllers();
        this.getOperationCodes();
        this.getServices();
-    }
+    },
+    watch: {
+        selectedOperationCodes: function() {
+            if (this.selectedOperationCodes.length === 0) {
+                this.deleteDisabled = true
+            } else {
+                this.deleteDisabled = false
+            }
+        }
+    },
 }
 </script>
 

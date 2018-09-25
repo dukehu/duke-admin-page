@@ -10,7 +10,7 @@
                     <Button @click="search"><i class="fa fa-search"></i></Button>
                 </div>
                  <div>
-                    <Button type="success" @click="modalAdd = true" ><i class="fa fa-plus"></i> Add</Button>
+                    <Button type="success" @click="saveUserModalShow = true" ><i class="fa fa-plus"></i> Add</Button>
                     <Button type="error"  :disabled="deleteDisabled" @click="modalDelete = true"><i class="fa fa-trash"></i> Delete</Button>
                 </div>
             </Row>
@@ -18,35 +18,37 @@
                 border
                 :stripe="true"
                 :columns="dataColumns" 
-                :data="dataTable" 
-                @on-selection-change="selectChange">
+                :data="pageInfo.list" 
+                @on-selection-change="selectChanged">
             </Table>
             <Row type="flex" justify="space-between" class="footer">
                 <div class="info-bar">
                     Show
                     <Input-number 
                         class="input-number" 
-                        v-model="showNum" 
-                        :max="totalSize" 
+                        v-model="pageSize" 
+                        :max="pageInfo.total" 
                         :min="1" 
-                        @on-change="updateDataShow">
-                        {{ showNum }}
+                        @on-change="updatePageSize">
+                        {{ pageSize }}
                     </Input-number>
                     / Page
                 </div>
                 <div class="page">
-                    <span class="total">Total {{ totalSize }}</span>
+                    <span class="total">Total {{ pageInfo.total }}</span>
                     <Page 
-                        :total="totalSize" 
+                        :total="pageInfo.total" 
                         :current="currentPage" 
-                        :page-size="showNum" 
+                        :page-size="pageSize" 
                         @on-change="pageChange">
                     </Page>
                 </div>
             </Row>
         </div>
+
+        <!-- add user -->
         <Modal
-            v-model="modalAdd"
+            v-model="saveUserModalShow"
             title="Add"
             ok-text="OK"
             cancel-text="Cancel"
@@ -64,18 +66,19 @@
 export default {
     data() {
         return {
+            saveUserModalShow: false,
+            pageSize: 9,
+            currentPage: 1,
+            pageInfo: {},
             user: {},
+            selectedUsers: [],
             deleteDisabled: true,
-            modalAdd: false,
             RwdPnsmtNorm: false,
             keyword: '',
-            dataDelete: [],
-            showNum: 10,
-            currentPage: 1,
-            totalSize: 2,
             dataColumns: [
-                {id: '20156541', title: '账号', key: 'loginname'},
-                {id: '20156542', title: '姓名', key: 'realname'},
+                {type: 'selection', width: 60, align: 'center'},
+                {id: '20156541', title: '账号', key: 'loginName'},
+                {id: '20156542', title: '姓名', key: 'realName'},
                 {id: '20156543', title: '状态', key: 'status'},
                 {id: '20156544', title: '性别', key: 'gender'},
                 {id: '20156545', title: '地址', key: 'avatar'},
@@ -111,27 +114,45 @@ export default {
                         ]);
                     }
                 }
-            ],
-            dataTable: [
-                {loginname: '', realname: '', status: '', gender: '', avatar: '', createtime: ''},
             ]
         }
     },
     methods: {
+        // 用户列表
+        getUserList() {
+            this.$axios('get','/api/admin/user', {
+                keyword: this.keyword,
+                page: this.currentPage,
+                size: this.pageSize
+            }).then(data => {
+                this.pageInfo = data.data;
+            })
+        },
+        // 改变每页条数
+        updatePageSize() {
+            this.getUserList();
+        },
+        // 点击上一页、下一页、页码时调用
+        pageChange(page) {
+            this.currentPage = page;
+            this.getUserList();
+        },
+        selectChanged(data) {
+            this.selectedUsers = data;
+            let userIds = "";
+            if(this.selectedUsers.length) {
+                this.selectedUsers.forEach(user => {
+                    userIds += user.id + ',';
+                });
+                userIds = userIds.substring(0, userIds.length - 1);
+                console.log(userIds);
+            }
+        },
         search() {
 
         },
         selectChange(data) {
             this.dataDelete = data
-        },
-        updateDataShow() {
-            let startPage = (this.currentPage - 1) * this.showNum
-            let endPage = startPage + this.showNum
-            this.dataShow = this.data.slice(startPage, endPage)
-        },
-        pageChange(page) {
-            this.currentPage = page
-            this.updateDataShow()
         },
         addOk: function (data) {
             this.dataTable.unshift(data)
@@ -156,6 +177,16 @@ export default {
         }
     },
     watch: {
+        selectedUsers: function() {
+            if (this.selectedUsers.length === 0) {
+                this.deleteDisabled = true
+            } else {
+                this.deleteDisabled = false
+            }
+        }
+    },
+    created() {
+        this.getUserList();
     }
 }
 </script>

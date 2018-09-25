@@ -32,7 +32,8 @@ export default {
                 ]},
                 {id: 'monitor', name: '服务监控', icon: 'fa fa-bar-chart', children: [
                     {id: 'logging', name: '日志管理', router: '/logging'},
-                    {id: 'user', name: 'SQL 监控', router: '/user'}
+                    {id: 'user', name: 'SQL 监控', router: '/user'},
+                    {id: 'code-genderator', name: '代码生成', router: '/generator'}
                 ]},
             ],
             activeName: 'Dashboard'
